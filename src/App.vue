@@ -15,6 +15,7 @@
 </template>
 
 <script>
+import axios from "axios";
 import Header from "./components/Header.vue";
 import Tasks from "./components/Tasks.vue";
 import AddTask from "./components/AddTask.vue";
@@ -32,44 +33,41 @@ export default {
     };
   },
   methods: {
-    deleteTask(id) {
+    async addTask(newTask) {
+      const { data } = await axios.post("/api/tasks", newTask);
+      this.tasks = [...this.tasks, data];
+    },
+    async deleteTask(id) {
       if (confirm("Are you sure")) {
-        this.tasks = this.tasks.filter((t) => t.id !== id);
+        const { status } = await axios.delete(`/api/tasks/${id}`);
+        status === 200
+          ? (this.tasks = this.tasks.filter((t) => t.id !== id))
+          : alert("Error deleting task");
       }
     },
-    toggleReminder(id) {
+    async toggleReminder(id) {
+      const taskToToggle = await this.fetchTask(id);
+      taskToToggle.reminder = !taskToToggle.reminder;
+
+      const { data } = await axios.put(`/api/tasks/${id}`, taskToToggle);
       this.tasks = this.tasks.map((t) =>
-        t.id === id ? { ...t, reminder: !t.reminder } : t
+        t.id === id ? { ...t, reminder: data.reminder } : t
       );
-    },
-    addTask(newTask) {
-      this.tasks = [...this.tasks, newTask];
     },
     toggleAddTask() {
       this.showAddTask = !this.showAddTask;
     },
+    async fetchTasks() {
+      const { data } = await axios.get("/api/tasks");
+      return data;
+    },
+    async fetchTask(id) {
+      const { data } = await axios.get(`/api/tasks/${id}`);
+      return data;
+    },
   },
-  created() {
-    this.tasks = [
-      {
-        id: 1,
-        text: "Doctor Appointment",
-        day: "March 1st at 2:30pm",
-        reminder: true,
-      },
-      {
-        id: 2,
-        text: "Meeting at School",
-        day: "March 3st at 1:30pm",
-        reminder: true,
-      },
-      {
-        id: 3,
-        text: "Food Shopping",
-        day: "March 3st at 11:00am",
-        reminder: false,
-      },
-    ];
+  async created() {
+    this.tasks = await this.fetchTasks();
   },
 };
 </script>
